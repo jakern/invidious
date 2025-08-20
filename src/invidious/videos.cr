@@ -29,6 +29,11 @@ struct Video
   @[DB::Field(ignore: true)]
   property description : String?
 
+  # DB::Field(ignore: ...) is also used to ignore an instance value as apart of our patch of
+  # DB::Serializable to also generate a constructor that takes in the defined properties as arguments
+  @[DB::Field(ignore: true)]
+  @streams_has_valid_link : Bool? = nil
+
   module JSONConverter
     def self.from_rs(rs)
       JSON.parse(rs.read(String)).as_h
@@ -103,7 +108,7 @@ struct Video
   end
 
   def adaptive_fmts : Array(Hash(String, JSON::Any))
-    if formats = info.dig?("streamingData", "adaptiveFormats")
+    if ((formats = info.dig?("streamingData", "adaptiveFormats")) && streams_has_link?(formats))
       return formats
         .as_a.map(&.as_h)
         .sort_by! { |f| f["width"]?.try &.as_i || f["audioTrack"]?.try { |a| a["audioIsDefault"]?.try { |v| v.as_bool ? -1 : 0 } } || 0 }
@@ -118,6 +123,12 @@ struct Video
 
   def audio_streams
     adaptive_fmts.select &.["mimeType"]?.try &.as_s.starts_with?("audio")
+  end
+
+  private def streams_has_link?(formats)
+    streams_has_valid_link = @streams_has_valid_link
+    return streams_has_valid_link if !(streams_has_valid_link.nil?)
+    return @streams_has_valid_link ||= !(formats.dig?(0, "url").try(&.as_s.empty?) || false)
   end
 
   # Misc. methods
