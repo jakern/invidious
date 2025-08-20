@@ -9,6 +9,15 @@ COPY ./shard.yml ./shard.yml
 COPY ./shard.lock ./shard.lock
 RUN shards install --production
 
+ARG CURRENT_COMMIT
+ARG CURRENT_BRANCH
+ARG CURRENT_VERSION
+
+# Example: write commit info into a file in the image
+RUN echo "Commit: $CURRENT_COMMIT" > /commit_info.txt && \
+    echo "Branch: $CURRENT_BRANCH" >> /commit_info.txt && \
+    echo "Version: $CURRENT_VERSION" >> /commit_info.txt
+
 COPY ./src/ ./src/
 # TODO: .git folder is required for building – this is destructive.
 # See definition of CURRENT_BRANCH, CURRENT_COMMIT and CURRENT_VERSION.
